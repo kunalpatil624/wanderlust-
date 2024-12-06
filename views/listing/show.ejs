@@ -26,6 +26,22 @@
        </form>
     </div>
     
+    
 </div>
+   <div class="col-8 offset-2 mt-2 mb-2">
+      <h2>create a reviews</h2>
+      <form action="/listings/<%= listingData._id %>/reviews" method="post">
+            <div>
+              <label for="redioo"></label>
+              <input type="range" name="review[reting]" min="1" max="5" class="form-range">
+            </div>
+
+            <div class="mt-2 mb-2">
+              <label for="comment" class="form-lable" ></label>
+              <textarea name="review[comment]" id="comment" class="form-control" rows="5" cols="30"></textarea>
+            </div>
+            <button class="btn btn-outline-dark">add review</button>
+      </form>
+    </div>
 </div>
 </body>

@@ -9,6 +9,7 @@ const wrapAsync = require("./utils/wrapAsync.js");
 const expressError = require("./utils/expressError.js");
 // const { nextTick } = require("process");   // not sure
 const { listingSchema } = require("./schema.js");
+const Reviews = require("./models/reviews.js");
 
 
 
@@ -125,6 +126,21 @@ app.delete("/listings/:id", wrapAsync (async (req, res) => {
   res.redirect("/listings");
 }));
 
+// reviews page
+app.post("/listings/:id/reviews", async(req, res, next) => {
+  let {id} = req.params;
+  let listing = await Listing.findById(req.params.id);
+  console.log(req.body.review.comment);   //print comment
+  let newReview = new Reviews(req.body.review);
+
+  listing.reviews.push(newReview);
+  
+  await listing.save();
+  await newReview.save();
+  
+  res.redirect(`/listings/${id}`);
+})
+
 // error page not found
 app.all("*", (req, res, next) => {
   next(new expressError(404, "PAGE NOT FOUND!"));
@@ -136,3 +152,4 @@ app.use((err, req, res, next) => {
   // res.status(status).send(message);
   res.status(status).render("./listing/error.ejs", {message});
 })
+

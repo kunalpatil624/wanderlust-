@@ -1,4 +1,7 @@
 const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
+
+const reviews = require("./reviews.js");
 
 const listingSchema = new mongoose.Schema({
     title: {
@@ -17,7 +20,14 @@ const listingSchema = new mongoose.Schema({
       },
     price: Number,
     location: String,
-    country: String
+    country: String,
+
+    reviews: [
+     {
+      type: Schema.Types.ObjectId,
+      ref: "reviews"
+     },
+    ],
 });
 
 const listing = mongoose.model("listing", listingSchema);
