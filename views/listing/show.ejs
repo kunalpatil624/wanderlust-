@@ -5,7 +5,7 @@
         <div class="col-8 offset-2">
     <h3>All information of "<%= listingData.title %>" </h3>
 
-    <div class="card" >
+    <div class="card listing-card" >
         <img src="<%=listingData.image%>" class="card-img-top" alt="listing image">
         <div class="card-body">
           <p class="card-text">
@@ -30,18 +30,37 @@
 </div>
    <div class="col-8 offset-2 mt-2 mb-2">
       <h2>create a reviews</h2>
-      <form action="/listings/<%= listingData._id %>/reviews" method="post">
+      <form action="/listings/<%= listingData._id %>/reviews" method="post" novalidate class="needs-validation">
             <div>
               <label for="redioo"></label>
-              <input type="range" name="review[reting]" min="1" max="5" class="form-range">
+              <input type="range" name="review[reting]" min="1" max="5" class="form-range" required>
             </div>
 
             <div class="mt-2 mb-2">
               <label for="comment" class="form-lable" ></label>
-              <textarea name="review[comment]" id="comment" class="form-control" rows="5" cols="30"></textarea>
+              <textarea name="review[comment]" id="comment" class="form-control" rows="5" cols="30" required ></textarea>
+
+            <div class="invalid-feedback">Please send commen!</div>
+
             </div>
             <button class="btn btn-outline-dark">add review</button>
       </form>
+
+      <hr>
+
+      <b><p>All reviews</p></b>
+        
+      <div class="row">
+      <% for(review of listingData.reviews){ %>
+        <div class="card p-2 col-5 ms-3 mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Card title</h5>
+            <h6 class="card-text"><%=review.reting%> Star</h6>
+            <p class="card-text"><%=review.comment%></p>
+          </div>
+        </div>
+      <%}%>
     </div>
+  </div>
 </div>
 </body>

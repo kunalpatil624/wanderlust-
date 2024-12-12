@@ -8,8 +8,9 @@ const ejsMate = require("ejs-mate");
 const wrapAsync = require("./utils/wrapAsync.js");
 const expressError = require("./utils/expressError.js");
 // const { nextTick } = require("process");   // not sure
-const { listingSchema } = require("./schema.js");
+const { listingSchema, reviewsSchema} = require("./schema.js");
 const Reviews = require("./models/reviews.js");
+const reviews = require("./models/reviews.js");
 
 
 
@@ -48,6 +49,19 @@ const validateSchema = (req, res, next) => {
   }
 }
 
+// validate schema for reviews
+const validateReviews = (req, res, next) => {
+  let {error} = reviewsSchema.validate(req.body);
+  console.log(error);
+  if(error){
+    let errMsg = error.details.map((el) => el.message).join(",");
+    throw new expressError(400, errMsg);
+  }
+  else{
+    next();
+  }
+}
+
 app.get("/", wrapAsync(async (req, res) => {
   const  allListing = await Listing.find({});
   res.render("./listing/index.ejs", {allListing});
@@ -72,8 +86,9 @@ app.get("/", wrapAsync(async (req, res) => {
 // show rout
 app.get("/listings/:id", wrapAsync (async (req, res) => {
   let {id} = req.params;
-  let listingData = await Listing.findById(id)
-  res.render("./listing/show.ejs", {listingData});
+  let listingData = await Listing.findById(id).populate("reviews");
+
+  res.render("./listing/show.ejs", {listingData}, );
 }));
 
 // index rout
@@ -127,7 +142,7 @@ app.delete("/listings/:id", wrapAsync (async (req, res) => {
 }));
 
 // reviews page
-app.post("/listings/:id/reviews", async(req, res, next) => {
+app.post("/listings/:id/reviews", validateReviews, wrapAsync (async(req, res, next) => {
   let {id} = req.params;
   let listing = await Listing.findById(req.params.id);
   console.log(req.body.review.comment);   //print comment
@@ -139,7 +154,7 @@ app.post("/listings/:id/reviews", async(req, res, next) => {
   await newReview.save();
   
   res.redirect(`/listings/${id}`);
-})
+}))
 
 // error page not found
 app.all("*", (req, res, next) => {
