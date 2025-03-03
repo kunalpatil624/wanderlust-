@@ -1,22 +1,36 @@
+if(process.env.NODE_ENV != "production"){
+  require('dotenv').config()
+}
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const wrapAsync = require("./utils/wrapAsync.js");
 const expressError = require("./utils/expressError.js");
-// const { nextTick } = require("process");   // not sure
-const { listingSchema, reviewsSchema} = require("./schema.js");
-const Reviews = require("./models/reviews.js");
-const reviews = require("./models/reviews.js");
+const session = require("express-session");
+const MongoStore = require('connect-mongo');
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const user = require("./models/user.js");
 
+const Reviews = require("./models/review.js");
+const Listing = require("./models/listing.js");
 
+const { model } = require("mongoose");
+
+const listingsRouter = require("./router/listings.js");
+const reviewsRouter = require("./router/reviews.js");
+const userRouter = require("./router/users.js");
+const { connect } = require('http2');
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({extended: true}));
+app.use(express.json());
 app.use(methodOverride("_method"));
 app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname, "public")));
@@ -28,133 +42,75 @@ main()
 .catch((err) => console.log(err));
 
 async function main() {
-  await mongoose.connect('mongodb://127.0.0.1:27017/wanderlust');
+   await mongoose.connect(process.env.ATLASDB_URL,
+    {useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 50000,
+    });
 }
 
 app.listen(8080, () => {
     console.log("port is listening to 8080");
 })
 
-
-// validate schema 
-const validateSchema = (req, res, next) => {
-  let {error} = listingSchema.validate(req.body);
-  console.log(error);
-  if(error){
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new expressError(400, errMsg);
+const store = MongoStore.create({
+  secret: "kunal",
+  mongoUrl: process.env.ATLASDB_URL,
+  touchAfter: 24 * 3600,
+  crypto: {
+    secret: process.env.SECRET
   }
-  else{
-    next();
-  }
-}
+})
 
-// validate schema for reviews
-const validateReviews = (req, res, next) => {
-  let {error} = reviewsSchema.validate(req.body);
-  console.log(error);
-  if(error){
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new expressError(400, errMsg);
-  }
-  else{
-    next();
-  }
-}
+ store.on("error", () => {
+  console.log("ERROR in MONGO SESSION STORE", err);
+ })
 
-app.get("/", wrapAsync(async (req, res) => {
-  const  allListing = await Listing.find({});
-  res.render("./listing/index.ejs", {allListing});
-  // console.log(allListing);
-}));
+const sessionOptions = {
+  store,
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  },
+};
 
-// app.get("/listing", (req, res) => {
-//   const sempleListing = new Listing({
-//     titel: "goa bietch",
-//     discription: "this bietch are very cool",
-//     image: "https://in.images.search.yahoo.com/search/images;_ylt=AwrKCcmkpUBnfQIA8QO7HAx.;_ylu=Y29sbwNzZzMEcG9zAzEEdnRpZAMEc2VjA3BpdnM-?p=goa+beaches&fr2=piv-web&type=E210IN826G0&fr=mcafee#id=11&iurl=https%3A%2F%2Fvoiceofadventure.com%2Fwp-content%2Fuploads%2F2022%2F06%2F60d0813807aff-Baga_Beach_In_Goa.jpg&action=click",
-//     price: 1200,
-//     location: "goa",
-//     country: "india"
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(user.authenticate()));
+
+passport.serializeUser(user.serializeUser());
+passport.deserializeUser(user.deserializeUser());
+
+app.use((req, res, next) => {
+res.locals.success = req.flash("success");
+res.locals.error = req.flash("error");
+res.locals.currUser = req.user;
+next();
+});
+
+// // demo user creat
+// app.get("/demouser", async(req, res) => {
+//   let fakeUser = new user({
+//     email: "kunalpatil@gmail.com",
+//     username: "knlpvvtt",
 //   });
 
-//   sempleListing.save();
-//   console.log("add success");
-//   res.send("add success");
+//   let registerUser = await user.register(fakeUser, "knl123") ;
+//   res.send(registerUser);
 // })
 
-// show rout
-app.get("/listings/:id", wrapAsync (async (req, res) => {
-  let {id} = req.params;
-  let listingData = await Listing.findById(id).populate("reviews");
+app.use("/listings", listingsRouter);
+app.use("/listings/:id/reviews", reviewsRouter);
+app.use("/", userRouter);
 
-  res.render("./listing/show.ejs", {listingData}, );
-}));
-
-// index rout
-app.get("/listings", wrapAsync (async (req, res, next) => {
-
-    const  allListing = await Listing.find({});
-   res.render("./listing/index.ejs", {allListing});
-  //  console.log(allListing);
-})
-);
-
-// create new rout
-app.get("/listing/new", (req,res) => {
-  res.render("./listing/new.ejs");
-})
-
-//add new liating rout
-app.post("/listings", validateSchema, wrapAsync (async (req, res, next) => {
-    // let {title, description, image, price, location, country} = req.body;
-  let listing = req.body.listing;
-  const newListing = new Listing(listing);
-  await newListing.save();
-  res.redirect("/listings");
-}));
-
-//edit rout
-app.get("/listings/:id/edit", wrapAsync (async (req, res) => {
-  let {id} = req.params;
-  let listingData = await Listing.findById(id)
-  res.render("./listing/edit.ejs", {listingData});
-}));
-
-//updaite rout
-app.put("/listings/:id", validateSchema, wrapAsync (async (req, res) => {
-
-  // if(!req.body.Listing){
-  //   throw new expressError(400, "plesa send valid data!");
-  // }
-  
-  let {id} = req.params;
-  await Listing.findByIdAndUpdate(id, {... req.body.listing});
-  res.redirect(`/listings/${id}`);
-}));
-
-// delete rout
-app.delete("/listings/:id", wrapAsync (async (req, res) => {
-  let {id} = req.params;
-  console.log(id);
-  await Listing.findByIdAndDelete(id);
-  res.redirect("/listings");
-}));
-
-// reviews page
-app.post("/listings/:id/reviews", validateReviews, wrapAsync (async(req, res, next) => {
-  let {id} = req.params;
-  let listing = await Listing.findById(req.params.id);
-  console.log(req.body.review.comment);   //print comment
-  let newReview = new Reviews(req.body.review);
-
-  listing.reviews.push(newReview);
-  
-  await listing.save();
-  await newReview.save();
-  
-  res.redirect(`/listings/${id}`);
-}))
 
 // error page not found
 app.all("*", (req, res, next) => {
