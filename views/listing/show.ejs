@@ -23,9 +23,12 @@
       
         <a href="/listings/<%= listingData._id %>/edit" class="btn btn-dark btn-add edit-btn">Edit</a>
 
-        <form action="/listings/<%= listingData._id %>?_method=DELETE" method="post">
+        <%if(!currUser){%>
+          <form action="/listings/<%= listingData._id %>?_method=DELETE" method="post">
         <button class="btn btn-dark">Delete</button>
        </form>
+        <%}%>
+        
     </div>
     <% } %>
 </div>
@@ -70,9 +73,10 @@
             <p class="starability-result card-text" data-rating="<%=review.reting%>"></p>
             <p class="card-text"><%=review.comment%></p>
 
-            <form class="mb-3" action="/listings/<%= listingData._id %>/reviews/<%= review._id %>?_method=DELETE" method="post">
-              <button class="btn btn-dark btn-sm">delete</button>
-            </form>
+              <form class="mb-3" action="/listings/<%= listingData._id %>/reviews/<%= review._id %>?_method=DELETE" method="post">
+                <button class="btn btn-dark btn-sm">delete</button>
+              </form>
+              
           </div>
         </div>
       <%}%>

@@ -42,32 +42,36 @@ main()
 .catch((err) => console.log(err));
 
 async function main() {
-   await mongoose.connect(process.env.ATLASDB_URL,
-    {useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 50000,
-    });
+  await mongoose.connect("mongodb://localhost:27017/wanderlust");
 }
+
+// async function main() {
+//    await mongoose.connect(process.env.ATLASDB_URL,
+//     {useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//     serverSelectionTimeoutMS: 50000,
+//     });
+// }
 
 app.listen(8080, () => {
     console.log("port is listening to 8080");
 })
 
-const store = MongoStore.create({
-  secret: "kunal",
-  mongoUrl: process.env.ATLASDB_URL,
-  touchAfter: 24 * 3600,
-  crypto: {
-    secret: process.env.SECRET
-  }
-})
+// const store = MongoStore.create({
+//   secret: "kunal",
+//   mongoUrl: process.env.ATLASDB_URL,
+//   touchAfter: 24 * 3600,
+//   crypto: {
+//     secret: process.env.SECRET
+//   }
+// })
 
- store.on("error", () => {
-  console.log("ERROR in MONGO SESSION STORE", err);
- })
+//  store.on("error", () => {
+//   console.log("ERROR in MONGO SESSION STORE", err);
+//  })
 
 const sessionOptions = {
-  store,
+  // store,
   secret: process.env.SECRET,
   resave: false,
   saveUninitialized: true,
